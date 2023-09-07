@@ -1,0 +1,164 @@
+---
+title: "Resumen datos CNAA"
+author: "Erik Sandvig"
+date: "2023-06-05"
+output: html_document
+---
+
+LOAD PACKAGES
+```{r}
+library(tidyverse)
+library(lubridate)
+library(ggrepel)
+library(Cairo)
+library(gt)
+library(webshot2)
+```
+
+LEER Y LIMPIAR DATOS
+```{r}
+data <- read.csv("datos cnaa feb 2023.csv")
+#incluye .sp
+especies <- read.csv("especies censables cnaa.csv")
+especies <- especies %>% 
+  mutate(Scientific.Name = scientific_name)
+
+#remover subespecies y solo dejar especies censables 
+especies_limpio <- read.csv("especies censables cnaa limpio.csv")
+especies_limpio <- especies_limpio %>% 
+  mutate(Scientific.Name = scientific_name)
+
+#limpiar y transformar datos
+data <- data %>% 
+  mutate(Date = as.Date(Date), Count = as.numeric(Count), Common.Name = as.factor(Common.Name), Scientific.Name = as.factor(Scientific.Name), Región = as.factor(State.Province), Location = as.factor(Location)) %>% 
+  inner_join(especies_limpio, by = 'Scientific.Name') %>% 
+  droplevels()
+  
+#ordenar regiones
+levels(data$Región)<- c('Aysén', 'Antofagasta', 'Arica y Parinacota','Araucanía', 'Atacama', 'Bio-Bio', 'Coquimbo', "O'Higgins",'Los Lagos', 'Lor Ríos', 'Magallanes', 'Maule', 'Ñuble', 'Metropolitana', 'Tarapacá', 'Valparaíso')
+data$Región <- factor(data$Región, levels = c('Arica y Parinacota','Tarapacá', 'Antofagasta', 'Atacama','Coquimbo','Valparaíso', 'Metropolitana',"O'Higgins",'Maule', 'Ñuble','Bio-Bio','Araucanía', 'Lor Ríos','Los Lagos', 'Aysén','Magallanes'))
+
+
+#separar datos para verano e invierno 
+data_verano <- data%>% 
+  filter(Date >= as.Date(paste(year(Date), 01, 15, sep = "-")),
+           Date <= as.Date(paste(year(Date), 02, 15, sep = "-")))
+
+data_invierno <- data%>% 
+  filter(Date >= as.Date(paste(year(Date), 06, 15, sep = "-")),
+           Date <= as.Date(paste(year(Date), 08, 15, sep = "-")))
+```
+
+PLOT RESULTS
+```{r}
+#Riqueza
+sp_verano <- data_verano %>%
+  group_by(year(Date)) %>% 
+  summarise(richness = n_distinct(Common.Name)) %>% 
+  rename(date='year(Date)')
+
+sp_invierno <- data_invierno %>%
+  group_by(year(Date)) %>% 
+  summarise(richness = n_distinct(Common.Name)) %>% 
+  rename(date='year(Date)')
+
+sp_all <- rbind(sp_verano,sp_invierno)
+sp_all$Censo <- rep(c("Verano", "Invierno"), each = 14)
+
+sp_plot <- ggplot(sp_all, aes(x = date, y = richness, fill=Censo, col=Censo)) +
+  geom_line(size=1) +
+  labs(x = "", y = "N especies") +
+  scale_color_manual(values=c('Verano' = 'darkorange', 'Invierno' = 'lightblue'))+
+  scale_x_continuous(n.breaks = 7)+
+  theme_classic()+
+  theme(legend.position = 'none')+
+  ylim(0,115)
+
+
+#Abundancia relativa
+ab_verano <- data_verano %>%
+  group_by(year(Date)) %>% 
+  summarise(Abundancia = sum(Count, na.rm=T)) %>% 
+  rename(date='year(Date)')
+
+ab_invierno <- data_invierno %>%
+  group_by(year(Date)) %>% 
+  summarise(Abundancia = sum(Count, na.rm=T)) %>% 
+  rename(date='year(Date)')
+
+ab_all <- rbind(ab_verano,ab_invierno)
+ab_all$Censo <- rep(c("Verano", "Invierno"), each = 14)
+
+ab_plot <- ggplot(ab_all, aes(x = date, y = Abundancia, fill=Censo, col=Censo)) +
+  geom_line(size=1) +
+  labs(x = "", y = 'N individuos') +
+  scale_color_manual(values=c('Verano' = 'darkorange', 'Invierno' = 'lightblue'))+
+  scale_x_continuous(n.breaks = 7)+
+  theme_classic()+
+  theme(legend.position = 'none')+
+  ylim(0,150000)
+
+
+#Censos por temporada por año
+sitios_verano <- data_verano %>% 
+  group_by(year(Date)) %>% 
+  summarise(N = n_distinct(Location)) %>% 
+  rename(date='year(Date)')
+
+sitios_invierno <- data_invierno %>% 
+  group_by(year(Date)) %>% 
+  summarise(N = n_distinct(Location)) %>% 
+  rename(date='year(Date)')
+
+sitios_all <- rbind(sitios_verano,sitios_invierno)
+sitios_all$Censo <- rep(c('Verano','Invierno'), each =14)
+
+sitios_plot <- ggplot(sitios_all, aes(x = date, y = N, fill=Censo, col=Censo)) +
+  geom_line(size=1) +
+  labs(x = "", y = 'N sitios') +
+  scale_color_manual(values=c('Verano' = 'darkorange', 'Invierno' = 'lightblue'))+
+  scale_x_continuous(n.breaks = 7)+
+  theme_classic()+
+  theme(legend.position = c(0.2, 0.8))+
+  geom_text_repel(aes(label=N),vjust= -2,  size=3.5,show.legend = F)+
+  ylim(0,150)
+
+
+ggsave("Riqueza CNAA Feb 2023 s.png", sp_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
+ggsave("Abundancia CNAA Feb 2023 s.png", ab_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
+ggsave("Sitios CNAA Feb 2023 s.png", sitios_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
+```
+
+POR REGIÓN
+```{r}
+#Riqueza
+
+#Verano
+plot_sitios_region_verano <- data_verano %>%
+  group_by(year(Date),Región) %>% 
+  summarise(N = n_distinct(Location)) %>% 
+  rename(date='year(Date)') %>% 
+  pivot_wider(names_from = date, values_from = N, values_fill = 0) %>% 
+  arrange(Región) %>%
+  gt() %>% 
+  data_color(
+    method = "numeric",
+    palette = "Oranges")
+
+
+plot_sitios_region_invierno <- data_invierno %>%
+  group_by(year(Date),Región) %>% 
+  summarise(N = n_distinct(Location)) %>% 
+  rename(date='year(Date)') %>% 
+  pivot_wider(names_from = date, values_from = N, values_fill = 0) %>% 
+  arrange(Región) %>%
+  gt() %>% 
+  data_color(
+    method = "numeric",
+    palette = "Blues")
+
+gtsave(plot_sitios_region_verano, file = "Sitios Region CNAA Feb 2023 v.png")
+gtsave(plot_sp_region_invierno, file = "Riqueza Region CNAA Feb 2023 i.png")
+
+```
+
