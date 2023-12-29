@@ -17,7 +17,7 @@ library(webshot2)
 
 LEER Y LIMPIAR DATOS
 ```{r}
-data <- read.csv("datos cnaa feb 2023.csv")
+data <- read.csv("datos cnaa jul 2023.csv")
 #incluye .sp
 especies <- read.csv("especies censables cnaa.csv")
 especies <- especies %>% 
@@ -63,7 +63,7 @@ sp_invierno <- data_invierno %>%
   rename(date='year(Date)')
 
 sp_all <- rbind(sp_verano,sp_invierno)
-sp_all$Censo <- rep(c("Verano", "Invierno"), each = 14)
+sp_all$Censo <- c(rep("Verano",14),rep("Invierno", 15))
 
 sp_plot <- ggplot(sp_all, aes(x = date, y = richness, fill=Censo, col=Censo)) +
   geom_line(size=1) +
@@ -87,7 +87,7 @@ ab_invierno <- data_invierno %>%
   rename(date='year(Date)')
 
 ab_all <- rbind(ab_verano,ab_invierno)
-ab_all$Censo <- rep(c("Verano", "Invierno"), each = 14)
+ab_all$Censo <- c(rep("Verano",14),rep("Invierno", 15))
 
 ab_plot <- ggplot(ab_all, aes(x = date, y = Abundancia, fill=Censo, col=Censo)) +
   geom_line(size=1) +
@@ -111,7 +111,7 @@ sitios_invierno <- data_invierno %>%
   rename(date='year(Date)')
 
 sitios_all <- rbind(sitios_verano,sitios_invierno)
-sitios_all$Censo <- rep(c('Verano','Invierno'), each =14)
+sitios_all$Censo <- c(rep("Verano",14),rep("Invierno", 15))
 
 sitios_plot <- ggplot(sitios_all, aes(x = date, y = N, fill=Censo, col=Censo)) +
   geom_line(size=1) +
@@ -124,9 +124,9 @@ sitios_plot <- ggplot(sitios_all, aes(x = date, y = N, fill=Censo, col=Censo)) +
   ylim(0,150)
 
 
-ggsave("Riqueza CNAA Feb 2023 s.png", sp_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
-ggsave("Abundancia CNAA Feb 2023 s.png", ab_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
-ggsave("Sitios CNAA Feb 2023 s.png", sitios_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
+ggsave("Riqueza CNAA Jul 2023 s.png", sp_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
+ggsave("Abundancia CNAA Jul 2023 s.png", ab_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
+ggsave("Sitios CNAA Jul 2023 s.png", sitios_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
 ```
 
 POR REGIÓN
@@ -157,8 +157,8 @@ plot_sitios_region_invierno <- data_invierno %>%
     method = "numeric",
     palette = "Blues")
 
-gtsave(plot_sitios_region_verano, file = "Sitios Region CNAA Feb 2023 v.png")
-gtsave(plot_sp_region_invierno, file = "Riqueza Region CNAA Feb 2023 i.png")
+gtsave(plot_sitios_region_verano, file = "Sitios Region CNAA Jul 2023 v.png")
+gtsave(plot_sitios_region_invierno, file = "Riqueza Region CNAA Jul 2023 i.png")
 
 ```
 
