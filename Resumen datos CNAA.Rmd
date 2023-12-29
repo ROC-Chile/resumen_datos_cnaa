@@ -35,14 +35,14 @@ data <- data %>%
   droplevels()
   
 #ordenar regiones
-levels(data$Región)<- c('Aysén', 'Antofagasta', 'Arica y Parinacota','Araucanía', 'Atacama', 'Bio-Bio', 'Coquimbo', "O'Higgins",'Los Lagos', 'Lor Ríos', 'Magallanes', 'Maule', 'Ñuble', 'Metropolitana', 'Tarapacá', 'Valparaíso')
-data$Región <- factor(data$Región, levels = c('Arica y Parinacota','Tarapacá', 'Antofagasta', 'Atacama','Coquimbo','Valparaíso', 'Metropolitana',"O'Higgins",'Maule', 'Ñuble','Bio-Bio','Araucanía', 'Lor Ríos','Los Lagos', 'Aysén','Magallanes'))
+levels(data$Región)<- c('Aysén', 'Antofagasta', 'Arica y Parinacota','Araucanía', 'Atacama', 'Bío-Bío', 'Coquimbo', "O'Higgins",'Los Lagos', 'Los Ríos', 'Magallanes', 'Maule', 'Ñuble', 'Metropolitana', 'Tarapacá', 'Valparaíso')
+data$Región <- factor(data$Región, levels = c('Arica y Parinacota','Tarapacá', 'Antofagasta', 'Atacama','Coquimbo','Valparaíso', 'Metropolitana',"O'Higgins",'Maule', 'Ñuble','Bío-Bío','Araucanía', 'Los Ríos','Los Lagos', 'Aysén','Magallanes'))
 
 
 #separar datos para verano e invierno 
 data_verano <- data%>% 
   filter(Date >= as.Date(paste(year(Date), 01, 15, sep = "-")),
-           Date <= as.Date(paste(year(Date), 02, 15, sep = "-")))
+           Date <= as.Date(paste(year(Date), 02, 28, sep = "-")))
 
 data_invierno <- data%>% 
   filter(Date >= as.Date(paste(year(Date), 06, 15, sep = "-")),
@@ -96,7 +96,7 @@ ab_plot <- ggplot(ab_all, aes(x = date, y = Abundancia, fill=Censo, col=Censo)) 
   scale_x_continuous(n.breaks = 7)+
   theme_classic()+
   theme(legend.position = 'none')+
-  ylim(0,150000)
+  ylim(0,(max(ab_all$Abundancia)*1.1))
 
 
 #Censos por temporada por año
@@ -121,7 +121,7 @@ sitios_plot <- ggplot(sitios_all, aes(x = date, y = N, fill=Censo, col=Censo)) +
   theme_classic()+
   theme(legend.position = c(0.2, 0.8))+
   geom_text_repel(aes(label=N),vjust= -2,  size=3.5,show.legend = F)+
-  ylim(0,150)
+  ylim(0,(max(sitios_all$N)*1.1))
 
 
 ggsave("Riqueza CNAA Jul 2023 s.png", sp_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
