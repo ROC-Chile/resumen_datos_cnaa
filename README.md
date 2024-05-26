@@ -3,4 +3,4 @@ Código y archivos para crear figuras que resumen datos en el tiempo a nivel reg
 
 El documento que resume y explica los datos y que contiene estas figuras se distribuye a los censistas después de cada temporada de censos.
 
-## Última actualización: Julio 2023
+## Última actualización: Febrero 2024
