@@ -9,7 +9,7 @@ output:
 ---
 
 
-```{Packages}
+```{r cargar paquetes}
 
 library(tidyverse)
 library(lubridate)
@@ -23,6 +23,7 @@ library(tidyr)
 
 ```{r Leer y limpiar datos generales}
 data <- read.csv("datos cnaa oct 2024.csv")
+sitios <- read.csv("SitiosCNAAsep24.csv")
 
 #incluye .sp
 especies <- read.csv("especies censables cnaa.csv")
@@ -39,11 +40,18 @@ data <- data %>%
   mutate(Date = as.Date(Date), Count = as.numeric(Count), Common.Name = as.factor(Common.Name), Scientific.Name = as.factor(Scientific.Name), Región = as.factor(State.Province), Location = as.factor(Location)) %>% 
   inner_join(especies_limpio, by = 'Scientific.Name') %>% 
   droplevels()
+
+sitios <- sitios %>% 
+  rename('Location' = 'Lugar')
   
 #ordenar regiones
 levels(data$Región)<- c('Aysén', 'Antofagasta', 'Arica y Parinacota','Araucanía', 'Atacama', 'Bío-Bío', 'Coquimbo', "O'Higgins",'Los Lagos', 'Los Ríos', 'Magallanes', 'Maule', 'Ñuble', 'Metropolitana', 'Tarapacá', 'Valparaíso')
 data$Región <- factor(data$Región, levels = c('Arica y Parinacota','Tarapacá', 'Antofagasta', 'Atacama','Coquimbo','Valparaíso', 'Metropolitana',"O'Higgins",'Maule', 'Ñuble','Bío-Bío','Araucanía', 'Los Ríos','Los Lagos', 'Aysén','Magallanes'))
 
+# Filtrar los datos usando los sitios prioritarios 
+data <- data %>%
+  filter(Location %in% sitios$Location) %>%
+  droplevels()
 ```
 
 ```{r Arica y Parinacota}
@@ -146,7 +154,7 @@ SPs_region_inv <- data_invierno %>%
   select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2017`, `2022`, `2023`, `2024`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
     columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2017`, `2022`, `2023`, `2024`),
@@ -155,7 +163,33 @@ SPs_region_inv <- SPs_region_inv %>%
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2017`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2017`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -164,22 +198,52 @@ SPs_region_ver <- data_verano %>%
   pivot_wider(names_from = `year(Date)`, values_from = Total_Count, values_fill = 0) %>%  
   rename(`Especie` = Common.Name) %>%  
   mutate(across(`2010`:`2024`, ~replace_na(.x, 0))) %>%  
-  select(`Especie`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%  
+  select(`Especie`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
-    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2023`, `2024`),
     method = "numeric",
     palette = "Oranges",
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs XV CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs XV CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs XV CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs XV CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs XV CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs XV CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs XV CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs XV CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -191,7 +255,7 @@ replicas.ver <- data_verano %>%
 Sitios_region_ver <- replicas.ver %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Sitio`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2023`, `2024`) %>%
   mutate(Total = rowSums(across(`2010`:`2024`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
@@ -308,9 +372,9 @@ sitios_plot <- ggplot(sitios_all, aes(x = date, y = N, fill=Censo, col=Censo)) +
   scale_color_manual(values=c('Verano' = 'darkorange', 'Invierno' = 'lightblue'))+
   scale_x_continuous(n.breaks = 9)+
   theme_classic()+
-  theme(legend.position = c(0.8, 0.6))+
+  theme(legend.position = c(0.8, 0.2))+
   geom_text_repel(aes(label=N),vjust= -2,  size=3.5,show.legend = F)+
-  ylim(0, max(sitios_all$N))
+  ylim(0, 3)
 
 ggsave("Riqueza I CNAA Oct 2024.png", sp_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
 ggsave("Abundancia I CNAA Oct 2024.png", ab_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
@@ -343,14 +407,14 @@ SPs_region_ver <- data_verano %>%
   summarise(Total_Count = sum(Count, na.rm = TRUE), .groups = 'drop') %>%  
   pivot_wider(names_from = `year(Date)`, values_from = Total_Count, values_fill = 0) %>%  
   rename(`Especie` = Common.Name) %>%  
-  mutate(across(`2010`:`2024`, ~replace_na(.x, 0))) %>%  
-  select(`Especie`, `2010`, `2011`, `2012`, `2014`, `2019`, `2024`) %>%  
+  mutate(across(`2010`:`2012`, ~replace_na(.x, 0))) %>%  
+  select(`Especie`, `2010`, `2012`) %>%  
   arrange(`Especie`) 
 
 SPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
-    columns = c(`2010`, `2011`, `2012`, `2014`, `2019`, `2024`),
+    columns = c(`2010`, `2012`),
     method = "numeric",
     palette = "Oranges",
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
@@ -371,8 +435,8 @@ replicas.ver <- data_verano %>%
 Sitios_region_ver <- replicas.ver %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2010`, `2011`, `2012`, `2014`, `2019`, `2024`) %>%
-  mutate(Total = rowSums(across(`2010`:`2024`, ~ . != ""))) %>%
+  select(`Sitio`, `2010`, `2012`) %>%
+  mutate(Total = rowSums(across(`2010`:`2012`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
   data_color(
@@ -686,7 +750,7 @@ SPs_region_inv <- data_invierno %>%
   select(`Especie`, `2015`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
     columns = c(`2015`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
@@ -695,7 +759,33 @@ SPs_region_inv <- SPs_region_inv %>%
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2015`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2015`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -707,7 +797,7 @@ SPs_region_ver <- data_verano %>%
   select(`Especie`, `2013`, `2014`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
     columns = c(`2013`, `2014`, `2019`, `2021`, `2022`, `2023`, `2024`),
@@ -716,10 +806,40 @@ SPs_region_ver <- SPs_region_ver %>%
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs III CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs III CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2013`, `2014`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2013`, `2014`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs III CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs III CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs III CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs III CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs III CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs III CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -866,7 +986,7 @@ SPs_region_inv <- data_invierno %>%
   select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
     columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
@@ -875,7 +995,33 @@ SPs_region_inv <- SPs_region_inv %>%
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -887,7 +1033,7 @@ SPs_region_ver <- data_verano %>%
   select(`Especie`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
     columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
@@ -896,10 +1042,40 @@ SPs_region_ver <- SPs_region_ver %>%
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs IV CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs IV CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs IV CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs IV CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs IV CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs IV CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs IV CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs IV CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -941,7 +1117,6 @@ Sitios_region_inv <- replicas.inv %>%
     palette = "Blues"  
   )
 
-
 gtsave(Sitios_region_ver, file = "Sitios IV CNAA oct 2024 ver.png")
 gtsave(Sitios_region_inv, file = "Sitios IV CNAA oct 2024 inv.png")
 ```
@@ -951,11 +1126,11 @@ gtsave(Sitios_region_inv, file = "Sitios IV CNAA oct 2024 inv.png")
 V <- filter(data, Región == "Valparaíso")
 
 #separar datos para verano e invierno 
-data_verano <- V%>% 
+data_verano <- V %>% 
   filter(Date >= as.Date(paste(year(Date), 01, 15, sep = "-")),
            Date <= as.Date(paste(year(Date), 02, 28, sep = "-")))
 
-data_invierno <- V%>% 
+data_invierno <- V %>% 
   filter(Date >= as.Date(paste(year(Date), 06, 15, sep = "-")),
            Date <= as.Date(paste(year(Date), 08, 15, sep = "-")))
 
@@ -1043,19 +1218,45 @@ SPs_region_inv <- data_invierno %>%
   pivot_wider(names_from = `year(Date)`, values_from = Total_Count, values_fill = 0) %>%
   rename(`Especie` = Common.Name) %>%
   mutate(across(`2009`:`2024`, ~replace_na(.x, 0))) %>%
-  select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
-    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`),
     method = "numeric",
     palette = "Blues",
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -1067,7 +1268,7 @@ SPs_region_ver <- data_verano %>%
   select(`Especie`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
     columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
@@ -1076,10 +1277,40 @@ SPs_region_ver <- SPs_region_ver %>%
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs V CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs V CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs V CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs V CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs V CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs V CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs V CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs V CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -1111,7 +1342,7 @@ replicas.inv <- data_invierno %>%
 Sitios_region_inv <- replicas.inv %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Sitio`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
   mutate(Total = rowSums(across(`2009`:`2024`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
@@ -1120,7 +1351,6 @@ Sitios_region_inv <- replicas.inv %>%
     method = "numeric", 
     palette = "Blues"  
   )
-
 
 gtsave(Sitios_region_ver, file = "Sitios V CNAA oct 2024 ver.png")
 gtsave(Sitios_region_inv, file = "Sitios V CNAA oct 2024 inv.png")
@@ -1208,7 +1438,7 @@ sitios_plot <- ggplot(sitios_all, aes(x = date, y = N, fill=Censo, col=Censo)) +
   scale_color_manual(values=c('Verano' = 'darkorange', 'Invierno' = 'lightblue'))+
   scale_x_continuous(n.breaks = 9)+
   theme_classic()+
-  theme(legend.position = c(0.2, 0.8))+
+  theme(legend.position = c(0.2, 0.2))+
   geom_text_repel(aes(label=N),vjust= -2,  size=3.5,show.legend = F)+
   ylim(0, max(sitios_all$N))
 
@@ -1226,7 +1456,7 @@ SPs_region_inv <- data_invierno %>%
   select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
     columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`),
@@ -1235,7 +1465,33 @@ SPs_region_inv <- SPs_region_inv %>%
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -1247,7 +1503,7 @@ SPs_region_ver <- data_verano %>%
   select(`Especie`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
     columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
@@ -1256,10 +1512,40 @@ SPs_region_ver <- SPs_region_ver %>%
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs XIII CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs XIII CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs XIII CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs XIII CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs XIII CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs XIII CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs XIII CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs XIII CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -1301,7 +1587,6 @@ Sitios_region_inv <- replicas.inv %>%
     palette = "Blues"  
   )
 
-
 gtsave(Sitios_region_ver, file = "Sitios XIII CNAA oct 2024 ver.png")
 gtsave(Sitios_region_inv, file = "Sitios XIII CNAA oct 2024 inv.png")
 ```
@@ -1311,11 +1596,11 @@ gtsave(Sitios_region_inv, file = "Sitios XIII CNAA oct 2024 inv.png")
 VI <- filter(data, Región == "O'Higgins")
 
 #separar datos para verano e invierno 
-data_verano <- VI%>% 
+data_verano <- VI %>% 
   filter(Date >= as.Date(paste(year(Date), 01, 15, sep = "-")),
            Date <= as.Date(paste(year(Date), 02, 28, sep = "-")))
 
-data_invierno <- VI%>% 
+data_invierno <- VI %>% 
   filter(Date >= as.Date(paste(year(Date), 06, 15, sep = "-")),
            Date <= as.Date(paste(year(Date), 08, 15, sep = "-")))
 
@@ -1388,7 +1673,7 @@ sitios_plot <- ggplot(sitios_all, aes(x = date, y = N, fill=Censo, col=Censo)) +
   scale_color_manual(values=c('Verano' = 'darkorange', 'Invierno' = 'lightblue'))+
   scale_x_continuous(n.breaks = 9)+
   theme_classic()+
-  theme(legend.position = c(0.2, 0.8))+
+  theme(legend.position = c(0.8, 0.2))+
   geom_text_repel(aes(label=N),vjust= -2,  size=3.5,show.legend = F)+
   ylim(0, max(sitios_all$N))
 
@@ -1406,7 +1691,7 @@ SPs_region_inv <- data_invierno %>%
   select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
     columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`),
@@ -1415,7 +1700,33 @@ SPs_region_inv <- SPs_region_inv %>%
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -1427,7 +1738,7 @@ SPs_region_ver <- data_verano %>%
   select(`Especie`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
     columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
@@ -1436,10 +1747,40 @@ SPs_region_ver <- SPs_region_ver %>%
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs VI CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs VI CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs VI CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs VI CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs VI CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs VI CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs VI CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs VI CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -1480,7 +1821,6 @@ Sitios_region_inv <- replicas.inv %>%
     method = "numeric", 
     palette = "Blues"  
   )
-
 
 gtsave(Sitios_region_ver, file = "Sitios VI CNAA oct 2024 ver.png")
 gtsave(Sitios_region_inv, file = "Sitios VI CNAA oct 2024 inv.png")
@@ -1583,19 +1923,45 @@ SPs_region_inv <- data_invierno %>%
   pivot_wider(names_from = `year(Date)`, values_from = Total_Count, values_fill = 0) %>%
   rename(`Especie` = Common.Name) %>%
   mutate(across(`2009`:`2024`, ~replace_na(.x, 0))) %>%
-  select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
-    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
     method = "numeric",
     palette = "Blues",
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -1604,22 +1970,52 @@ SPs_region_ver <- data_verano %>%
   pivot_wider(names_from = `year(Date)`, values_from = Total_Count, values_fill = 0) %>%  
   rename(`Especie` = Common.Name) %>%  
   mutate(across(`2010`:`2024`, ~replace_na(.x, 0))) %>%  
-  select(`Especie`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%  
+  select(`Especie`,  `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
-    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    columns = c( `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
     method = "numeric",
     palette = "Oranges",
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs VII CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs VII CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c( `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c( `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs VII CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs VI CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs VII CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs VII CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs VII CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs VII CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -1631,7 +2027,7 @@ replicas.ver <- data_verano %>%
 Sitios_region_ver <- replicas.ver %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Sitio`,  `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
   mutate(Total = rowSums(across(`2010`:`2024`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
@@ -1640,6 +2036,7 @@ Sitios_region_ver <- replicas.ver %>%
     method = "numeric", 
     palette = "Oranges"  
   )
+
 
 replicas.inv <- data_invierno %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -1650,7 +2047,7 @@ replicas.inv <- data_invierno %>%
 Sitios_region_inv <- replicas.inv %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Sitio`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
   mutate(Total = rowSums(across(`2009`:`2024`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
@@ -1659,7 +2056,6 @@ Sitios_region_inv <- replicas.inv %>%
     method = "numeric", 
     palette = "Blues"  
   )
-
 
 gtsave(Sitios_region_ver, file = "Sitios VII CNAA oct 2024 ver.png")
 gtsave(Sitios_region_inv, file = "Sitios VII CNAA oct 2024 inv.png")
@@ -1747,9 +2143,9 @@ sitios_plot <- ggplot(sitios_all, aes(x = date, y = N, fill=Censo, col=Censo)) +
   scale_color_manual(values=c('Verano' = 'darkorange', 'Invierno' = 'lightblue'))+
   scale_x_continuous(n.breaks = 9)+
   theme_classic()+
-  theme(legend.position = c(0.2, 0.8))+
+  theme(legend.position = c(0.8, 0.8))+
   geom_text_repel(aes(label=N),vjust= -2,  size=3.5,show.legend = F)+
-  ylim(0, max(sitios_all$N))
+  ylim(0, 2)
 
 ggsave("Riqueza XVI CNAA Oct 2024.png", sp_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
 ggsave("Abundancia XVI CNAA Oct 2024.png", ab_plot, width = 4.5, height = 3.5, dpi = 300, type = "cairo")
@@ -1945,7 +2341,7 @@ SPs_region_inv <- data_invierno %>%
   select(`Especie`, `2009`, `2010`, `2011`, `2013`, `2022`, `2023`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
     columns = c(`2009`, `2010`, `2011`, `2013`, `2022`, `2023`),
@@ -1954,7 +2350,33 @@ SPs_region_inv <- SPs_region_inv %>%
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2013`, `2022`, `2023`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2013`, `2022`, `2023`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -1966,7 +2388,7 @@ SPs_region_ver <- data_verano %>%
   select(`Especie`, `2010`, `2011`, `2012`, `2013`, `2014`, `2019`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
     columns = c( `2010`, `2011`, `2012`, `2013`, `2014`, `2019`, `2024`),
@@ -1975,10 +2397,40 @@ SPs_region_ver <- SPs_region_ver %>%
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs VIII CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs VIII CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2019`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2019`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs VIII CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs VIII CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs VIII CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs VIII CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs VIII CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs VIII CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -2125,7 +2577,7 @@ SPs_region_inv <- data_invierno %>%
   select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2022`, `2023`, `2024`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
     columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2022`, `2023`, `2024`),
@@ -2134,7 +2586,33 @@ SPs_region_inv <- SPs_region_inv %>%
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -2146,7 +2624,7 @@ SPs_region_ver <- data_verano %>%
   select(`Especie`, `2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2018`, `2019`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
     columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2018`, `2019`, `2023`, `2024`),
@@ -2155,10 +2633,40 @@ SPs_region_ver <- SPs_region_ver %>%
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs IX CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs IX CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2018`, `2019`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2018`, `2019`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs IX CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs IX CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs IX CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs IX CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs IX CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs IX CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -2199,7 +2707,6 @@ Sitios_region_inv <- replicas.inv %>%
     method = "numeric", 
     palette = "Blues"  
   )
-
 
 gtsave(Sitios_region_ver, file = "Sitios IX CNAA oct 2024 ver.png")
 gtsave(Sitios_region_inv, file = "Sitios IX CNAA oct 2024 inv.png")
@@ -2483,18 +2990,44 @@ SPs_region_inv <- data_invierno %>%
   rename(`Especie` = Common.Name) %>%
   mutate(across(`2009`:`2024`, ~replace_na(.x, 0))) %>%
   select(`Especie`, `2009`, `2010`,  `2012`, `2013`, `2014`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
-  arrange(`Especie`) 
+  arrange(`Especie`)  
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
-    columns = c(`2009`, `2010`, `2012`, `2013`, `2014`,  `2019`,  `2021`, `2022`, `2023`, `2024`),
+    columns = c(`2009`, `2010`, `2012`, `2013`, `2014`, `2019`, `2021`, `2022`, `2023`, `2024`),
     method = "numeric",
     palette = "Blues",
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2012`, `2013`, `2014`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`,  `2012`, `2013`, `2014`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -2506,7 +3039,7 @@ SPs_region_ver <- data_verano %>%
   select(`Especie`, `2010`, `2012`, `2013`, `2014`, `2015`,  `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
     columns = c(`2010`, `2012`, `2013`, `2014`, `2015`,  `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
@@ -2515,10 +3048,40 @@ SPs_region_ver <- SPs_region_ver %>%
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs X CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs X CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2012`, `2013`, `2014`, `2015`,  `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2012`, `2013`, `2014`, `2015`,  `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs X CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs X CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs X CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs X CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs X CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs X CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -2530,7 +3093,7 @@ replicas.ver <- data_verano %>%
 Sitios_region_ver <- replicas.ver %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2010`,  `2012`, `2013`, `2014`, `2015`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Sitio`, `2010`, `2012`, `2013`, `2014`, `2015`,  `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
   mutate(Total = rowSums(across(`2010`:`2024`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
@@ -2559,7 +3122,6 @@ Sitios_region_inv <- replicas.inv %>%
     method = "numeric", 
     palette = "Blues"  
   )
-
 
 gtsave(Sitios_region_ver, file = "Sitios X CNAA oct 2024 ver.png")
 gtsave(Sitios_region_inv, file = "Sitios X CNAA oct 2024 inv.png")
@@ -2662,13 +3224,13 @@ SPs_region_inv <- data_invierno %>%
   pivot_wider(names_from = `year(Date)`, values_from = Total_Count, values_fill = 0) %>%
   rename(`Especie` = Common.Name) %>%
   mutate(across(`2014`:`2024`, ~replace_na(.x, 0))) %>%
-  select(`Especie`, `2014`, `2015`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Especie`, `2014`, `2015`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
   arrange(`Especie`) 
 
 SPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
-    columns = c(`2014`, `2015`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    columns = c(`2014`, `2015`, `2019`, `2021`, `2022`, `2023`, `2024`),
     method = "numeric",
     palette = "Blues",
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
@@ -2682,14 +3244,14 @@ SPs_region_ver <- data_verano %>%
   summarise(Total_Count = sum(Count, na.rm = TRUE), .groups = 'drop') %>%  
   pivot_wider(names_from = `year(Date)`, values_from = Total_Count, values_fill = 0) %>%  
   rename(`Especie` = Common.Name) %>%  
-  mutate(across(`2015`:`2024`, ~replace_na(.x, 0))) %>%  
-  select(`Especie`, `2015`, `2018`, `2022`, `2023`, `2024`) %>%  
+  mutate(across(`2018`:`2024`, ~replace_na(.x, 0))) %>%  
+  select(`Especie`, `2018`, `2022`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
 SPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
-    columns = c(`2015`, `2018`, `2022`, `2023`, `2024`),
+    columns = c(`2018`, `2022`, `2023`, `2024`),
     method = "numeric",
     palette = "Oranges",
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
@@ -2710,8 +3272,8 @@ replicas.ver <- data_verano %>%
 Sitios_region_ver <- replicas.ver %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2015`, `2018`, `2022`, `2023`, `2024`) %>%
-  mutate(Total = rowSums(across(`2015`:`2024`, ~ . != ""))) %>%
+  select(`Sitio`, `2018`, `2022`, `2023`, `2024`) %>%
+  mutate(Total = rowSums(across(`2018`:`2024`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
   data_color(
@@ -2719,7 +3281,6 @@ Sitios_region_ver <- replicas.ver %>%
     method = "numeric", 
     palette = "Oranges"  
   )
-
 
 replicas.inv <- data_invierno %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -2730,7 +3291,7 @@ replicas.inv <- data_invierno %>%
 Sitios_region_inv <- replicas.inv %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2014`, `2015`, `2018`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Sitio`, `2014`, `2015`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
   mutate(Total = rowSums(across(`2014`:`2024`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
@@ -2842,19 +3403,45 @@ SPs_region_inv <- data_invierno %>%
   pivot_wider(names_from = `year(Date)`, values_from = Total_Count, values_fill = 0) %>%
   rename(`Especie` = Common.Name) %>%
   mutate(across(`2009`:`2024`, ~replace_na(.x, 0))) %>%
-  select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Especie`, `2009`, `2010`, `2011`, `2012`, `2014`, `2016`, `2017`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
   arrange(`Especie`) 
 
-SPs_region_inv <- SPs_region_inv %>%
+tSPs_region_inv <- SPs_region_inv %>%
   gt() %>%
   data_color(
-    columns = c(`2009`, `2010`, `2011`, `2012`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`),
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2014`, `2016`, `2017`, `2019`, `2021`, `2022`, `2023`, `2024`),
     method = "numeric",
     palette = "Blues",
     domain = c(0, max(range(SPs_region_inv %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_inv
+tSPs_region_inv
+
+# Divide SPs_region_inv en dos partes
+SPs_region_inv_part1 <- SPs_region_inv %>% slice(1:(n() %/% 2))
+SPs_region_inv_part2 <- SPs_region_inv %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_inv_part1 <- SPs_region_inv_part1 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2014`, `2016`, `2017`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part1
+
+SPs_region_inv_part2 <- SPs_region_inv_part2 %>%
+  gt() %>%
+  data_color(
+    columns = c(`2009`, `2010`, `2011`, `2012`, `2014`, `2016`, `2017`, `2019`, `2021`, `2022`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Blues",
+    domain = c(0, max(range(SPs_region_inv_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_inv_part2
 
 SPs_region_ver <- data_verano %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -2863,22 +3450,52 @@ SPs_region_ver <- data_verano %>%
   pivot_wider(names_from = `year(Date)`, values_from = Total_Count, values_fill = 0) %>%  
   rename(`Especie` = Common.Name) %>%  
   mutate(across(`2010`:`2024`, ~replace_na(.x, 0))) %>%  
-  select(`Especie`, `2010`, `2011`, `2012`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2023`, `2024`) %>%  
+  select(`Especie`, `2010`, `2011`, `2012`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2023`, `2024`) %>%  
   arrange(`Especie`) 
 
-SPs_region_ver <- SPs_region_ver %>%
+tSPs_region_ver <- SPs_region_ver %>%
   gt() %>% 
   data_color(
-    columns = c(`2010`, `2011`, `2012`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2023`, `2024`),
+    columns = c(`2010`, `2011`, `2012`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2023`, `2024`),
     method = "numeric",
     palette = "Oranges",
     domain = c(0, max(range(SPs_region_ver %>% select(-Especie), na.rm = TRUE)))
   )
 
-SPs_region_ver
+tSPs_region_ver
 
-gtsave(SPs_region_ver, file = "SPs XII CNAA oct 2024 ver.png")
-gtsave(SPs_region_inv, file = "SPs XII CNAA oct 2024 inv.png")
+# Divide SPs_region_ver en dos partes
+SPs_region_ver_part1 <- SPs_region_ver %>% slice(1:(n() %/% 2))
+SPs_region_ver_part2 <- SPs_region_ver %>% slice((n() %/% 2 + 1):n())
+
+SPs_region_ver_part1 <- SPs_region_ver_part1 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part1 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part1
+
+SPs_region_ver_part2 <- SPs_region_ver_part2 %>%
+  gt() %>% 
+  data_color(
+    columns = c(`2010`, `2011`, `2012`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2023`, `2024`),
+    method = "numeric",
+    palette = "Oranges",
+    domain = c(0, max(range(SPs_region_ver_part2 %>% select(-Especie), na.rm = TRUE)))
+  )
+
+SPs_region_ver_part2
+
+gtsave(tSPs_region_ver, file = "SPs XII CNAA oct 2024 ver.png")
+gtsave(tSPs_region_inv, file = "SPs XII CNAA oct 2024 inv.png")
+gtsave(SPs_region_ver_part1, file = "SPs XII CNAA oct 2024 ver1.png")
+gtsave(SPs_region_ver_part2, file = "SPs XII CNAA oct 2024 ver2.png")
+gtsave(SPs_region_inv_part1, file = "SPs XII CNAA oct 2024 inv1.png")
+gtsave(SPs_region_inv_part2, file = "SPs XII CNAA oct 2024 inv2.png")
 
 #Sitios censados en la región
 replicas.ver <- data_verano %>%
@@ -2890,7 +3507,7 @@ replicas.ver <- data_verano %>%
 Sitios_region_ver <- replicas.ver %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2010`, `2011`, `2012`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2023`, `2024`) %>%
+  select(`Sitio`, `2010`, `2011`, `2012`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2023`, `2024`) %>%
   mutate(Total = rowSums(across(`2010`:`2024`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
@@ -2899,7 +3516,6 @@ Sitios_region_ver <- replicas.ver %>%
     method = "numeric", 
     palette = "Oranges"  
   )
-
 
 replicas.inv <- data_invierno %>%
   mutate(Date = as.Date(Date)) %>%  
@@ -2910,7 +3526,7 @@ replicas.inv <- data_invierno %>%
 Sitios_region_inv <- replicas.inv %>%
   pivot_wider(names_from = `year(Date)`, values_from = Visitado, values_fill = "") %>%  
   rename(`Sitio` = Location) %>%  
-  select(`Sitio`, `2009`, `2010`, `2011`, `2012`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>%
+  select(`Sitio`, `2009`, `2010`, `2011`, `2012`, `2014`, `2016`, `2017`, `2019`, `2021`, `2022`, `2023`, `2024`) %>%
   mutate(Total = rowSums(across(`2009`:`2024`, ~ . != ""))) %>%
   arrange(`Sitio`) %>%  
   gt() %>% 
